@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Express-Path — Formal Specification (Strict English)</title>
+  <title>iVucx-ExpressPath — Formal Specification (Strict English)</title>
+  <link rel="icon" href="iVucx-ExpressPath-icon.png" type="image/png">
   <style>
     :root{
       --bg: #00010a;
@@ -24,6 +25,7 @@
       line-height:1.6;
       -webkit-font-smoothing:antialiased;
       -moz-osx-font-smoothing:grayscale;
+      overflow:hidden; /* page-level scrolling disabled; each pane scrolls independently */
     }
 
     /* Fixed left sidebar (table of contents) — visually same color as background.
@@ -40,22 +42,26 @@
       color:var(--fg);
       overflow:auto; /* scrollable */
       -webkit-overflow-scrolling:touch;
-      /* hide visible scrollbar while keeping scroll functionality */
-      scrollbar-width: none; /* Firefox */
+      scrollbar-width: none; /* Firefox: hide scrollbar while keeping scroll functionality */
       -ms-overflow-style: none; /* IE 10+ */
       border-right:1px solid rgba(0,1,10,0.00);
     }
-    /* hide webkit scrollbar */
-    .sidebar::-webkit-scrollbar { width: 0; height: 0; }
+    .sidebar::-webkit-scrollbar { width: 0; height: 0; } /* hide webkit scrollbar */
 
     /* Main content area shifted right to accommodate fixed sidebar.
        Use flex centering so content is centered within the remaining area (between left boundary and right edge). */
     .main {
-      margin-left: var(--sidebar-width);
+      position:fixed;
+      left:var(--sidebar-width);
+      right:0;
+      top:0;
+      bottom:0;
       padding:28px;
       box-sizing:border-box;
       display:flex;
       justify-content:center; /* center content within remaining space */
+      overflow:auto; /* main pane scrollable independently */
+      -webkit-overflow-scrolling:touch;
     }
 
     /* Inner wrapper to constrain width and keep layout identical otherwise */
@@ -65,7 +71,8 @@
       margin: 0 auto;
     }
 
-    header h1{ margin:0 0 8px 0; font-size:28px; }
+    header h1{ margin:0 0 8px 0; font-size:28px; display:inline-block; vertical-align:middle; }
+    header .site-icon { width:40px; height:40px; display:inline-block; vertical-align:middle; margin-right:12px; object-fit:contain; }
     header p.lead{ margin:0 0 18px 0; color:var(--muted); }
 
     nav.toc{ padding:6px 0 0 0; }
@@ -89,13 +96,15 @@
 
     /* Ensure sidebar and main are usable on small screens: sidebar becomes narrower */
     @media (max-width:980px){
+      :root { --sidebar-width: 220px; }
       .sidebar{ width:220px; padding:18px; }
-      .main{ margin-left:220px; padding:18px; }
+      .main{ left:220px; padding:18px; }
       .content-inner{ max-width: calc(var(--max-width) - 220px); }
     }
     @media (max-width:640px){
+      :root { --sidebar-width: 200px; }
       .sidebar{ width:200px; padding:14px; }
-      .main{ margin-left:200px; padding:14px; }
+      .main{ left:200px; padding:14px; }
       .content-inner{ max-width: calc(var(--max-width) - 200px); }
     }
   </style>
@@ -114,10 +123,9 @@
       svg: { fontCache: 'global' }
     };
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" defer></script>
 </head>
 <body>
-  <aside class="sidebar" aria-label="Table of contents">
+  <aside class="sidebar" aria-label="Table of contents" id="sidebar">
     <nav class="toc">
       <strong>Table of contents</strong>
       <ul>
@@ -148,10 +156,11 @@
     </nav>
   </aside>
 
-  <main class="main" role="main">
+  <main class="main" role="main" id="mainPane">
     <div class="content-inner">
       <header>
-        <h1>Express-Path — Formal Specification (Strict English)</h1>
+        <img class="site-icon" src="iVucx-ExpressPath-icon.png" alt="iVucx-ExpressPath icon">
+        <h1>iVucx-ExpressPath — Formal Specification (Strict English)</h1>
         <p class="lead">This document is a precise, unambiguous specification of Express-Path. It preserves the original semantics and fills omitted or simplified items with explicit, configurable defaults and recommended values while keeping all rules deterministic and implementable.</p>
       </header>
 
@@ -503,82 +512,6 @@ POST /v1/ivucx/withdraw
           \]
         </div>
 
-        <p>Each of the above must be a calibrated probability: for all instances where the system outputs \(p\) for a component, the empirical frequency of the event should be approximately \(p\).</p>
-
-        <h3>3. Ideal chain-rule target</h3>
-
-        <div class="math-block">
-          \[ P(R_A \land C_A \land F_A \mid A,Q). \]
-        </div>
-
-        <div class="math-block">
-          \[ P(R_A\mid A,Q)\cdot P(C_A\mid A,Q,R_A)\cdot P(F_A\mid A,Q,R_A,C_A). \]
-        </div>
-
-        <h3>4. Practical scoring formulas (approximate)</h3>
-
-        <div class="math-block">
-          \[
-          \boxed{\displaystyle \mathcal{L} \;=\; \mathcal{Q}_A \cdot \alpha_A \cdot \mathcal{F}_A}
-          \qquad\text{and}\qquad
-          \boxed{\displaystyle \mathcal{E} \;=\; \mathcal{Q}_E \cdot \alpha_E \cdot \mathcal{F}_E \cdot \zeta.}
-          \]
-        </div>
-
-        <h3>5. Algorithmic pipeline (deterministic specification)</h3>
-
-        <ol>
-          <li><strong>Claim extraction:</strong> deterministically extract atomic claims \(S_A=\{s_{A,i}\}\) and \(S_E=\{s_{E,j}\}\) using a fixed prompt and canonicalization rules (tokenization, normalization, canonical variable naming). The extraction function must be deterministic given the same input and prompt.</li>
-
-          <li><strong>Raw scoring:</strong> compute raw real-valued scores \(z\) for each component using the pre-trained model as a deterministic scorer:
-            <ul>
-              <li>\(z_{\mathcal{Q}_A} = \mathrm{raw\_relevance}(Q,A)\)</li>
-              <li>\(z_{\alpha_A} = \mathrm{raw\_consistency}(A)\)</li>
-              <li>\(z_{\mathcal{F}_A} = \mathrm{raw\_factuality}(A)\) (retrieval-augmented when available)</li>
-              <li>Analogous \(z\) values for \(E\).</li>
-              <li>For refutation, compute per-claim contradiction scores \(z^{\mathrm{ref}}_i = \mathrm{raw\_contradiction}(E,s_{A,i})\) and aggregate (e.g., \(\max_i z^{\mathrm{ref}}_i\) or weighted average).</li>
-            </ul>
-          </li>
-
-          <li><strong>Calibration:</strong> learn monotone transforms \(T\) (Platt or isotonic) mapping raw scores \(z\) to probabilities \(p=T(z)\) using held-out labeled datasets. Apply transforms to obtain \(\mathcal{Q}_A,\alpha_A,\mathcal{F}_A,\dots,\zeta\).</li>
-
-          <li><strong>Optional conditional estimation:</strong> if feasible, estimate conditional probabilities directly (e.g., \(P(C_A\mid A,Q,R_A)\)) by including estimated relevance as an input feature to the consistency head.</li>
-
-          <li><strong>Aggregation:</strong> for multi-claim answers, compute per-claim \(\mathcal{F}_{A,i}\) and aggregate according to the chosen semantics (conjunctive or disjunctive) with explicit correlation adjustments when available.</li>
-
-          <li><strong>Explanation trace:</strong> produce a deterministic explanation: which claims reduced \(\mathcal{F}\), which pairwise contradictions contributed to \(\alpha\), and which retrieval snippets supported factuality judgments.</li>
-        </ol>
-
-        <h3>6. Aggregation semantics for multiple claims</h3>
-
-        <p>Two canonical semantics:</p>
-        <ul>
-          <li><strong>Conjunctive precision</strong> (all claims must be precise):
-            <div class="math-block">
-              \[ \mathcal{L}_{\mathrm{conj}} = \mathcal{Q}_A\cdot\alpha_A\cdot\prod_i \mathcal{F}_{A,i}. \]
-            </div>
-          </li>
-          <li><strong>Disjunctive success</strong> (at least one claim suffices): under independence,
-            <div class="math-block">
-              \[ P(\text{at least one precise}) \approx 1 - \prod_i (1 - p_i), \]
-            </div>
-            <p>where \(p_i\) are per-claim joint probabilities; adjust for pairwise correlations when available.</p>
-          </li>
-        </ul>
-
-        <h3>7. Calibration, training data, and evaluation metrics</h3>
-
-        <p>Training datasets must include human-labeled examples for relevance, internal consistency, factual precision, and refutation. Use Platt scaling or isotonic regression for calibration. Evaluate with Brier score, ECE, ROC AUC, PR AUC, and log-loss. Perform adversarial testing and domain stratification to detect overconfidence.</p>
-
-        <h3>8. Limitations and safeguards</h3>
-
-        <ul>
-          <li>Calibrated marginals do not guarantee correct joint probabilities; prefer chain-rule conditional estimation when possible.</li>
-          <li>Guard against gaming by maintaining human audits and adversarial examples in training and evaluation sets.</li>
-          <li>Factuality (\(\mathcal{F}\)) requires retrieval-augmented verification; language-model-only judgments are insufficient for high-stakes claims.</li>
-          <li>Always provide explanation traces with scores for human interpretability and appeal.</li>
-        </ul>
-
         <p class="muted">End of appendix.</p>
       </section>
 
@@ -587,5 +520,131 @@ POST /v1/ivucx/withdraw
       </footer>
     </div>
   </main>
+
+  <script>
+    // Track which pane the pointer is over; default to main pane.
+    (function(){
+      let pointerOver = null; // "sidebar" or "main"
+      const sidebar = document.getElementById('sidebar');
+      const mainPane = document.getElementById('mainPane');
+
+      // Update pointerOver on pointerenter/pointerleave for accuracy across devices
+      sidebar.addEventListener('pointerenter', () => { pointerOver = 'sidebar'; });
+      sidebar.addEventListener('pointerleave', () => { pointerOver = null; });
+
+      mainPane.addEventListener('pointerenter', () => { pointerOver = 'main'; });
+      mainPane.addEventListener('pointerleave', () => { pointerOver = null; });
+
+      // Wheel handler: ensure wheel events scroll only the pane under the pointer.
+      function onWheel(e) {
+        // If pointer position is known, route scroll to that pane only.
+        if (pointerOver === 'sidebar') {
+          // Let sidebar handle scroll; prevent default on main/document to avoid propagation.
+          // If sidebar cannot scroll further in the direction, consume the event without propagating.
+          const el = sidebar;
+          const delta = e.deltaY;
+          const atTop = el.scrollTop === 0;
+          const atBottom = Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop) < 1;
+          // Determine if the sidebar can scroll in the wheel direction
+          if ((delta < 0 && atTop) || (delta > 0 && atBottom)) {
+            // consume event to prevent main pane from scrolling
+            e.preventDefault();
+            e.stopPropagation();
+            // do not scroll main; sidebar cannot scroll further
+          } else {
+            // allow default so sidebar scrolls; but prevent propagation to document
+            e.stopPropagation();
+          }
+        } else if (pointerOver === 'main') {
+          const el = mainPane;
+          const delta = e.deltaY;
+          const atTop = el.scrollTop === 0;
+          const atBottom = Math.abs(el.scrollHeight - el.clientHeight - el.scrollTop) < 1;
+          if ((delta < 0 && atTop) || (delta > 0 && atBottom)) {
+            e.preventDefault();
+            e.stopPropagation();
+          } else {
+            e.stopPropagation();
+          }
+        } else {
+          // Pointer location unknown: conservative behavior — do not allow page-level scroll propagation.
+          // Try to find the element under the pointer using clientX/Y if available.
+          const x = e.clientX, y = e.clientY;
+          if (typeof x === 'number' && typeof y === 'number') {
+            const el = document.elementFromPoint(x, y);
+            if (el && sidebar.contains(el)) {
+              // route to sidebar
+              // allow default (sidebar will scroll) and stop propagation
+              e.stopPropagation();
+            } else {
+              // route to main
+              e.stopPropagation();
+            }
+          } else {
+            // fallback: stop propagation to prevent cross-pane scrolling
+            e.stopPropagation();
+          }
+        }
+      }
+
+      // Attach wheel listeners to document but capture phase to intercept early.
+      document.addEventListener('wheel', onWheel, { passive: false, capture: true });
+
+      // Touch support: prevent touchmove from causing the other pane to scroll.
+      // We track touchstart target and allow scrolling only on that pane.
+      let touchTarget = null;
+      document.addEventListener('touchstart', function(e){
+        if (e.touches && e.touches.length) {
+          const t = e.touches[0];
+          const el = document.elementFromPoint(t.clientX, t.clientY);
+          if (el && sidebar.contains(el)) touchTarget = 'sidebar';
+          else touchTarget = 'main';
+        }
+      }, { passive: true });
+
+      document.addEventListener('touchmove', function(e){
+        // If touchTarget is set, prevent default on the document to avoid scroll chaining.
+        if (touchTarget === 'sidebar') {
+          // allow sidebar to scroll naturally; prevent document from scrolling
+          // by stopping propagation on capture phase; here we prevent default to be safe.
+          e.stopPropagation();
+        } else if (touchTarget === 'main') {
+          e.stopPropagation();
+        }
+      }, { passive: false });
+
+      // Reset touchTarget on end/cancel
+      document.addEventListener('touchend', () => { touchTarget = null; }, { passive: true });
+      document.addEventListener('touchcancel', () => { touchTarget = null; }, { passive: true });
+
+      // Accessibility: keyboard scrolling should operate on the focused pane only.
+      // When focus enters sidebar or main, set pointerOver accordingly.
+      sidebar.addEventListener('focusin', () => { pointerOver = 'sidebar'; });
+      sidebar.addEventListener('focusout', () => { pointerOver = null; });
+      mainPane.addEventListener('focusin', () => { pointerOver = 'main'; });
+      mainPane.addEventListener('focusout', () => { pointerOver = null; });
+
+      // Ensure links in the sidebar do not cause the main pane to jump the page; they should scroll main pane to target.
+      sidebar.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', function(ev){
+          ev.preventDefault();
+          const id = this.getAttribute('href').slice(1);
+          const target = document.getElementById(id);
+          if (target) {
+            // Scroll main pane so the target is visible within content-inner
+            // Compute target's offset relative to content-inner
+            const contentInner = document.querySelector('.content-inner');
+            const rectContent = contentInner.getBoundingClientRect();
+            const rectTarget = target.getBoundingClientRect();
+            const offset = rectTarget.top - rectContent.top;
+            // Smooth scroll main pane
+            mainPane.scrollTo({ top: mainPane.scrollTop + offset - 12, behavior: 'smooth' });
+          }
+        });
+      });
+    })();
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" defer></script>
 </body>
 </html>
