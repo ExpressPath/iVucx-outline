@@ -38,22 +38,29 @@
       box-sizing:border-box;
       background:var(--bg); /* same as page background */
       color:var(--fg);
-      overflow:hidden; /* removed scrollbar as requested */
+      overflow:auto; /* scrollable */
       -webkit-overflow-scrolling:touch;
-      /* functional divider: same color as background so it's not visually distinct */
+      /* hide visible scrollbar while keeping scroll functionality */
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE 10+ */
       border-right:1px solid rgba(0,1,10,0.00);
     }
+    /* hide webkit scrollbar */
+    .sidebar::-webkit-scrollbar { width: 0; height: 0; }
 
     /* Main content area shifted right to accommodate fixed sidebar.
-       Inner content is centered between the left boundary (sidebar inner edge) and the right page edge. */
+       Use flex centering so content is centered within the remaining area (between left boundary and right edge). */
     .main {
-      margin-left: calc(var(--sidebar-width) + 0px);
+      margin-left: var(--sidebar-width);
       padding:28px;
       box-sizing:border-box;
+      display:flex;
+      justify-content:center; /* center content within remaining space */
     }
 
-    /* Inner wrapper to center content between left boundary and right edge */
+    /* Inner wrapper to constrain width and keep layout identical otherwise */
     .content-inner {
+      width:100%;
       max-width: calc(var(--max-width) - var(--sidebar-width));
       margin: 0 auto;
     }
@@ -83,13 +90,13 @@
     /* Ensure sidebar and main are usable on small screens: sidebar becomes narrower */
     @media (max-width:980px){
       .sidebar{ width:220px; padding:18px; }
-      .content-inner{ max-width: calc(var(--max-width) - 220px); }
       .main{ margin-left:220px; padding:18px; }
+      .content-inner{ max-width: calc(var(--max-width) - 220px); }
     }
     @media (max-width:640px){
       .sidebar{ width:200px; padding:14px; }
-      .content-inner{ max-width: calc(var(--max-width) - 200px); }
       .main{ margin-left:200px; padding:14px; }
+      .content-inner{ max-width: calc(var(--max-width) - 200px); }
     }
   </style>
 
