@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Express-Path — Formal Specification (English, MathJax)</title>
+  <title>Express-Path — Formal Specification (Strict English)</title>
   <style>
     :root{
       --bg: #00010a;
@@ -13,6 +13,7 @@
       --max-width: 1100px;
       --math-font: "STIX Two Math", "Cambria Math", "Times New Roman", serif;
       --body-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --sidebar-width: 280px;
     }
     html,body{
       height:100%;
@@ -24,26 +25,45 @@
       -webkit-font-smoothing:antialiased;
       -moz-osx-font-smoothing:grayscale;
     }
-    .container{
-      max-width:var(--max-width);
-      margin:28px auto;
+
+    /* Fixed left sidebar (table of contents) — visually same color as background.
+       Divider is present functionally but uses identical color so it is not visually distinct. */
+    .sidebar {
+      position:fixed;
+      left:0;
+      top:0;
+      bottom:0;
+      width:var(--sidebar-width);
+      padding:28px 18px;
+      box-sizing:border-box;
+      background:var(--bg); /* same as page background */
+      color:var(--fg);
+      overflow:auto;
+      -webkit-overflow-scrolling:touch;
+      /* functional divider: same color as background so it's not visually distinct */
+      border-right:1px solid rgba(0,1,10,0.00);
+    }
+
+    /* Main content area shifted right to accommodate fixed sidebar */
+    .main {
+      margin-left: calc(var(--sidebar-width) + 0px);
       padding:28px;
       box-sizing:border-box;
+      max-width: calc(1100px - var(--sidebar-width));
     }
+
     header h1{ margin:0 0 8px 0; font-size:28px; }
     header p.lead{ margin:0 0 18px 0; color:var(--muted); }
-    nav.toc{
-      margin:12px 0 22px 0;
-      padding:12px;
-      border-radius:8px;
-      background: rgba(255,255,255,0.02);
-      border:1px solid rgba(255,255,255,0.02);
-    }
-    nav.toc ul{ margin:0; padding-left:18px; }
-    nav.toc a{ color:var(--accent); text-decoration:none; }
+
+    nav.toc{ padding:6px 0 0 0; }
+    nav.toc strong{ display:block; margin-bottom:8px; color:var(--muted); }
+    nav.toc ul{ margin:0; padding-left:12px; list-style:none; }
+    nav.toc li{ margin:8px 0; }
+    nav.toc a{ color:var(--accent); text-decoration:none; font-size:14px; line-height:1.4; }
+
     section{ margin-bottom:20px; padding:14px; border-radius:8px; background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00)); border:1px solid rgba(255,255,255,0.02); }
-    h2{ margin-top:0; color:var(--fg); }
-    h3{ color:var(--fg); }
+    h2{ margin-top:0; color:var(--fg); font-size:18px; }
+    h3{ color:var(--fg); font-size:16px; }
     p{ margin:0 0 10px 0; }
     pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; background: rgba(255,255,255,0.02); padding:8px; border-radius:6px; color:var(--fg); overflow:auto; }
     blockquote{ margin:0 0 12px 0; padding-left:12px; border-left:3px solid rgba(255,255,255,0.06); color:var(--muted); }
@@ -53,7 +73,17 @@
     .math-block { display:block; padding:10px; margin:10px 0; background: rgba(255,255,255,0.02); border-radius:6px; font-family: var(--math-font); }
     .muted { color:var(--muted); font-size:0.95em; }
     footer { margin-top:18px; color:var(--muted); font-size:0.95em; }
-    @media (max-width:720px){ .container{ padding:18px; margin:18px; } h1{ font-size:22px; } }
+
+    /* Ensure sidebar and main are usable on small screens: sidebar becomes collapsible via horizontal scroll */
+    @media (max-width:980px){
+      .sidebar{ position:fixed; width:220px; padding:18px; }
+      .main{ margin-left: calc(220px + 0px); padding:18px; }
+    }
+    @media (max-width:640px){
+      /* On very small screens, allow sidebar to be scrolled horizontally into view */
+      .sidebar{ position:fixed; width:200px; }
+      .main{ margin-left:200px; padding:14px; }
+    }
   </style>
 
   <!-- MathJax configuration -->
@@ -73,40 +103,42 @@
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" defer></script>
 </head>
 <body>
-  <main class="container">
-    <header>
-      <h1>Express-Path — Formal Specification (Strict English)</h1>
-      <p class="lead">This document is a precise, unambiguous specification of Express-Path. It preserves the original semantics and fills omitted or simplified items with explicit, configurable defaults and recommended values while keeping all rules deterministic and implementable.</p>
-    </header>
-
-    <nav class="toc" aria-label="Table of contents">
+  <aside class="sidebar" aria-label="Table of contents">
+    <nav class="toc">
       <strong>Table of contents</strong>
       <ul>
         <li><a href="#one-line">1. One-line definition</a></li>
         <li><a href="#core-objects">2. Core objects and state model (mathematical)</a></li>
         <li><a href="#identity">3. Identity and anonymity rules (strict)</a></li>
         <li><a href="#content">4. Content types and publication</a></li>
-        <li><a href="#ivucx">5. iVucx currency and payment rules</a></li>
+        <li><a href="#ivucx">5. iVucx currency and payment rules (strict)</a></li>
         <li><a href="#lifecycle">6. Posting lifecycle, edits, and review cadence</a></li>
         <li><a href="#bounties">7. Additional bounties, split, and incentives</a></li>
-        <li><a href="#trust">8. Trust scoring (formal)</a></li>
+        <li><a href="#trust">8. Trust scoring — formal</a></li>
         <li><a href="#feed">9. Feed ranking for potential answerers</a></li>
         <li><a href="#resolution">10. Resolution flows, deadlines, and automatic distributions</a></li>
-        <li><a href="#debate">11. Debate mechanism and J/G/H states</a></li>
+        <li><a href="#debate">11. Debate mechanism and J/G/H states (formal)</a></li>
         <li><a href="#papers">12. Papers, citation, and reuse rules</a></li>
-        <li><a href="#fraud">13. Fraud and abuse defenses</a></li>
-        <li><a href="#legal">14. Legal and compliance constraints</a></li>
-        <li><a href="#minors">15. Minors and payout design</a></li>
+        <li><a href="#fraud">13. Fraud & abuse defenses (strict)</a></li>
+        <li><a href="#legal">14. Legal and compliance constraints (high level)</a></li>
+        <li><a href="#minors">15. Minors / payout design</a></li>
         <li><a href="#data-model">16. Data model (core tables)</a></li>
         <li><a href="#api">17. API surface (selected endpoints)</a></li>
-        <li><a href="#ui">18. UI rules and UX cues</a></li>
+        <li><a href="#ui">18. UI rules and UX cues (key decisions)</a></li>
         <li><a href="#kpis">19. KPIs and evaluation</a></li>
         <li><a href="#mvp">20. Implementation priorities (MVP)</a></li>
-        <li><a href="#risks">21. Risks and mitigations</a></li>
-        <li><a href="#summary">22. Final conceptual summary</a></li>
+        <li><a href="#risks">21. Risks & mitigations (short)</a></li>
+        <li><a href="#summary">22. Final conceptual summary (short)</a></li>
         <li><a href="#appendix">Appendix: Formal evaluation method (integrated)</a></li>
       </ul>
     </nav>
+  </aside>
+
+  <main class="main" role="main">
+    <header>
+      <h1>Express-Path — Formal Specification (Strict English)</h1>
+      <p class="lead">This document is a precise, unambiguous specification of Express-Path. It preserves the original semantics and fills omitted or simplified items with explicit, configurable defaults and recommended values while keeping all rules deterministic and implementable.</p>
+    </header>
 
     <section id="one-line">
       <h2>1. One-line definition</h2>
@@ -322,7 +354,7 @@
     </section>
 
     <section id="fraud">
-      <h2>13. Fraud and abuse defenses (strict)</h2>
+      <h2>13. Fraud & abuse defenses (strict)</h2>
 
       <p>Signals used for detection: device fingerprinting, IP heuristics, behavioral embeddings, temporal posting patterns, and ledger flow graphs. Detection algorithms include graph analytics (k-core, Louvain community detection), LSH/MinHash duplicate detection on content embeddings, and temporal anomaly detectors for rapid fund movements.</p>
 
@@ -336,7 +368,7 @@
     </section>
 
     <section id="minors">
-      <h2>15. Minors and payout design</h2>
+      <h2>15. Minors / payout design</h2>
 
       <p>Design patterns to allow minors to obtain value while limiting legal risk:</p>
       <ol>
@@ -460,19 +492,13 @@ POST /v1/ivucx/withdraw
 
       <h3>3. Ideal chain-rule target</h3>
 
-      <p>The ideal target for answer credibility is the joint posterior</p>
-
       <div class="math-block">
         \[ P(R_A \land C_A \land F_A \mid A,Q). \]
       </div>
 
-      <p>By the chain rule, this equals</p>
-
       <div class="math-block">
         \[ P(R_A\mid A,Q)\cdot P(C_A\mid A,Q,R_A)\cdot P(F_A\mid A,Q,R_A,C_A). \]
       </div>
-
-      <p>If conditional estimators are available, use them. Otherwise the practical approximation uses calibrated marginals as below.</p>
 
       <h3>4. Practical scoring formulas (approximate)</h3>
 
@@ -483,8 +509,6 @@ POST /v1/ivucx/withdraw
         \boxed{\displaystyle \mathcal{E} \;=\; \mathcal{Q}_E \cdot \alpha_E \cdot \mathcal{F}_E \cdot \zeta.}
         \]
       </div>
-
-      <p>These are exact if the components are the chain-rule conditional factors; otherwise they are calibrated-product approximations and must be validated against human judgments.</p>
 
       <h3>5. Algorithmic pipeline (deterministic specification)</h3>
 
@@ -515,15 +539,15 @@ POST /v1/ivucx/withdraw
       <p>Two canonical semantics:</p>
       <ul>
         <li><strong>Conjunctive precision</strong> (all claims must be precise):
-          \[
-          \mathcal{L}_{\mathrm{conj}} = \mathcal{Q}_A\cdot\alpha_A\cdot\prod_i \mathcal{F}_{A,i}.
-          \]
+          <div class="math-block">
+            \[ \mathcal{L}_{\mathrm{conj}} = \mathcal{Q}_A\cdot\alpha_A\cdot\prod_i \mathcal{F}_{A,i}. \]
+          </div>
         </li>
         <li><strong>Disjunctive success</strong> (at least one claim suffices): under independence,
-          \[
-          P(\text{at least one precise}) \approx 1 - \prod_i (1 - p_i),
-          \]
-          where \(p_i\) are per-claim joint probabilities; adjust for pairwise correlations when available.
+          <div class="math-block">
+            \[ P(\text{at least one precise}) \approx 1 - \prod_i (1 - p_i), \]
+          </div>
+          <p>where \(p_i\) are per-claim joint probabilities; adjust for pairwise correlations when available.</p>
         </li>
       </ul>
 
