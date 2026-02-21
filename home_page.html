@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Express-Path — Formal Specification (Strict English, MathJax)</title>
+  <style>
+    :root{
+      --bg: #00010a;
+      --fg: #ffffff;
+      --muted: #9aa6b2;
+      --accent: #7dd3fc;
+      --max-width: 1100px;
+      --math-font: "STIX Two Math", "Cambria Math", "Times New Roman", serif;
+      --body-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    html,body{
+      height:100%;
+      margin:0;
+      background:var(--bg);
+      color:var(--fg);
+      font-family:var(--body-font);
+      line-height:1.6;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    .container{
+      max-width:var(--max-width);
+      margin:28px auto;
+      padding:28px;
+      box-sizing:border-box;
+    }
+    header h1{ margin:0 0 8px 0; font-size:28px; }
+    header p.lead{ margin:0 0 18px 0; color:var(--muted); }
+    nav.toc{
+      margin:12px 0 22px 0;
+      padding:12px;
+      border-radius:8px;
+      background: rgba(255,255,255,0.02);
+      border:1px solid rgba(255,255,255,0.02);
+    }
+    nav.toc ul{ margin:0; padding-left:18px; }
+    nav.toc a{ color:var(--accent); text-decoration:none; }
+    section{ margin-bottom:20px; padding:14px; border-radius:8px; background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00)); border:1px solid rgba(255,255,255,0.02); }
+    h2{ margin-top:0; color:var(--fg); }
+    h3{ color:var(--fg); }
+    p{ margin:0 0 10px 0; }
+    pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; background: rgba(255,255,255,0.02); padding:8px; border-radius:6px; color:var(--fg); overflow:auto; }
+    blockquote{ margin:0 0 12px 0; padding-left:12px; border-left:3px solid rgba(255,255,255,0.06); color:var(--muted); }
+    table{ border-collapse:collapse; width:100%; margin:12px 0; color:var(--fg); }
+    th, td{ border:1px solid rgba(255,255,255,0.04); padding:8px; text-align:left; vertical-align:top; }
+    .math { font-family: var(--math-font); }
+    .math-block { display:block; padding:10px; margin:10px 0; background: rgba(255,255,255,0.02); border-radius:6px; font-family: var(--math-font); }
+    .muted { color:var(--muted); font-size:0.95em; }
+    footer { margin-top:18px; color:var(--muted); font-size:0.95em; }
+    @media (max-width:720px){ .container{ padding:18px; margin:18px; } h1{ font-size:22px; } }
+  </style>
+
+  <!-- MathJax configuration -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(','\\)']],
+        displayMath: [['\\[','\\]']],
+        macros: {
+          RR: "\\mathbb{R}",
+          EE: "\\mathbb{E}"
+        }
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" defer></script>
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>Express-Path — Formal Specification (Strict English)</h1>
+      <p class="lead">This document is a precise, unambiguous specification of Express-Path. It preserves the original semantics and fills omitted or simplified items with explicit, configurable defaults and recommended values while keeping all rules deterministic and implementable.</p>
+    </header>
+
+    <nav class="toc" aria-label="Table of contents">
+      <strong>Table of contents</strong>
+      <ul>
+        <li><a href="#one-line">1. One-line definition</a></li>
+        <li><a href="#core-objects">2. Core objects and state model (mathematical)</a></li>
+        <li><a href="#identity">3. Identity and anonymity rules (strict)</a></li>
+        <li><a href="#content">4. Content types and publication</a></li>
+        <li><a href="#ivucx">5. iVucx currency and payment rules</a></li>
+        <li><a href="#lifecycle">6. Posting lifecycle, edits, and review cadence</a></li>
+        <li><a href="#bounties">7. Additional bounties, split, and incentives</a></li>
+        <li><a href="#trust">8. Trust scoring (formal)</a></li>
+        <li><a href="#feed">9. Feed ranking for potential answerers</a></li>
+        <li><a href="#resolution">10. Resolution flows, deadlines, and automatic distributions</a></li>
+        <li><a href="#debate">11. Debate mechanism and J/G/H states</a></li>
+        <li><a href="#papers">12. Papers, citation, and reuse rules</a></li>
+        <li><a href="#fraud">13. Fraud and abuse defenses</a></li>
+        <li><a href="#legal">14. Legal and compliance constraints</a></li>
+        <li><a href="#minors">15. Minors and payout design</a></li>
+        <li><a href="#data-model">16. Data model (core tables)</a></li>
+        <li><a href="#api">17. API surface (selected endpoints)</a></li>
+        <li><a href="#ui">18. UI rules and UX cues</a></li>
+        <li><a href="#kpis">19. KPIs and evaluation</a></li>
+        <li><a href="#mvp">20. Implementation priorities (MVP)</a></li>
+        <li><a href="#risks">21. Risks and mitigations</a></li>
+        <li><a href="#summary">22. Final conceptual summary</a></li>
+        <li><a href="#appendix">Appendix: Formal evaluation method (integrated)</a></li>
+      </ul>
+    </nav>
+
+    <section id="one-line">
+      <h2>1. One-line definition</h2>
+      <p>
+        Express-Path is an anonymous, non-reputation knowledge marketplace and publication system in which each submission's reward and citation eligibility are determined solely by the submission's content quality; payments and contributions use a platform-managed internal currency called <strong>iVucx</strong>; answers and papers may be multimodal (text, structured mathematics, code, audio, video); per-post anonymity is enforced by generating a new display identifier for every post; and adjudication (trust scoring, debate outcomes, and citation decisions) is algorithmic with human oversight and auditable logs.
+      </p>
+    </section>
+
+    <section id="core-objects">
+      <h2>2. Core objects and state model (mathematical)</h2>
+
+      <p><strong>Sets and primary mappings</strong> (explicit):</p>
+
+      <ul>
+        <li><strong>Users</strong>: \(U\). Each physical person has one or more internal accounts; each account is represented by an internal identifier \(u\in U\). The backend stores the mapping from account to real-world identity for compliance; the UI never exposes persistent identity.</li>
+
+        <li><strong>Posts (questions / problems / papers)</strong>: \(Q\). For each post \(q\in Q\) the system stores:
+          <ul>
+            <li>internal poster id \(p_q\in U\) (backend only);</li>
+            <li>per-post display identifier \(id_{\mathrm{ui}}(q)\) (UUIDv4 string, unique, never reused);</li>
+            <li>initial bounty \(B_0(q)\in\mathbb{R}_{\ge 0}\) denominated in iVucx;</li>
+            <li>classification \(c_q\in\{\text{academic},\text{problem},\text{boundary}\}\) computed by classifier \(f_{\mathrm{class}}(q)\);</li>
+            <li>immutable edit history \(hist_q\) (append-only version log);</li>
+            <li>status \(s_q\in\{\text{open},\text{in\_debate},\text{resolved},\text{J},\text{G},\text{H},\text{N\#},\text{closed}\}\).</li>
+          </ul>
+        </li>
+
+        <li><strong>Answers</strong>: \(A\). For each answer \(a\in A\):
+          <ul>
+            <li>responder \(r_a\in U\) (backend only);</li>
+            <li>content \(C_a\) (multimodal payload);</li>
+            <li>feature vector \(\mathbf{s}_a\) (JSON of extracted features);</li>
+            <li>trust score \(T(a,q)\in[0,1]\);</li>
+            <li>creation timestamp \(t_a\).</li>
+          </ul>
+        </li>
+
+        <li><strong>Supporters</strong>: for each post \(q\), supporters set \(S_q\) contains accounts that contributed additional bounty.</li>
+
+        <li><strong>Ledger</strong>: balances \(bal(u)\), escrow accounts \(escrow(q)\), and total supply \(S_{\mathrm{tot}}\). The ledger invariant is strictly enforced:</li>
+      </ul>
+
+      <div class="math-block">
+        \[ \sum_{u\in U} bal(u) + \sum_{q\in Q} escrow(q) = S_{\mathrm{tot}}. \]
+      </div>
+
+      <p>All monetary operations are recorded as immutable double-entry ledger transactions with unique transaction identifiers and timestamps.</p>
+    </section>
+
+    <section id="identity">
+      <h2>3. Identity and anonymity rules (strict)</h2>
+
+      <ul>
+        <li>The UI displays only a per-post display identifier \(id_{\mathrm{ui}}(q)\) (UUIDv4). No persistent username, handle, follower lists, or reputation scores are shown.</li>
+        <li>There is no UI-level aggregation of posts by the same poster; the platform must not provide search or filters that reveal cross-post identity correlations.</li>
+        <li>The backend retains mapping \(p_q \mapsto \text{account}\) for compliance and fraud investigation; access to this mapping is strictly controlled and audited.</li>
+        <li>Multiple accounts per person are permitted at the UI level; backend fraud detection may restrict abusive patterns. No UI advantage (e.g., reputation) accrues from multiple accounts.</li>
+        <li>No organization or team pages are exposed; organizational affiliation fields are not supported in the public UI.</li>
+      </ul>
+    </section>
+
+    <section id="content">
+      <h2>4. Content types and publication</h2>
+
+      <p>Supported submission modalities: plain text, structured mathematics (LaTeX/MathML), code packages (archive with manifest), runnable notebooks or interactive sandboxes (with resource limits), audio, video, and PDF. Posts may combine modalities.</p>
+
+      <p>File constraints: maximum file sizes, allowed codecs/containers, and thumbnail requirements are configuration parameters; recommended defaults are documented in the operational deployment guide (not repeated here).</p>
+
+      <p><strong>Papers</strong>: a paper is a post subtype with required metadata fields: title, abstract, authorship declaration (internal only), license selection (e.g., CC-BY, CC-BY-SA, CC0). Authors retain copyright; the platform records the chosen license in metadata.</p>
+    </section>
+
+    <section id="ivucx">
+      <h2>5. iVucx currency and payment rules (strict)</h2>
+
+      <h3>Basic properties</h3>
+      <ul>
+        <li>iVucx is a centrally-managed internal ledger currency. Minting occurs only when: (a) verified adult users deposit fiat via approved channels and the platform credits iVucx; or (b) platform operations inject funds (sponsor pools, grants).</li>
+        <li>Minors cannot deposit fiat directly; minors may receive iVucx via platform reward flows subject to the minors policy (§15).</li>
+        <li>Withdrawals convert iVucx to external fiat subject to KYC/AML, withdrawal limits, and hold periods. Withdrawal rules are tiered by account age, verification level, and transaction risk score.</li>
+      </ul>
+
+      <h3>Escrow and payouts</h3>
+      <p>When a poster creates a bounty, the poster transfers \(B_0(q)\) from their balance to escrow \(escrow(q)\). On acceptance, the platform transfers escrow to the selected answerer minus platform fee \(f\). If multiple payouts occur (automatic distribution), the platform follows the distribution rules in §10.</p>
+
+      <h3>Fees and economics</h3>
+      <ul>
+        <li>Platform fee \(f\) is configurable; recommended default \(f=0.10\) (10%). Fee revenue funds operations, reserves, and anti-abuse sinks.</li>
+        <li>Ledger invariants and double-entry accounting are enforced; all mint/burn operations are logged and require operator authorization and audit trails.</li>
+      </ul>
+    </section>
+
+    <section id="lifecycle">
+      <h2>6. Posting lifecycle, edits, and review cadence</h2>
+
+      <p><strong>Poster obligations:</strong> the poster must perform at least one review action every 60 days. A review action is one of: accept an answer, start a debate, add a clarifying edit, or explicitly select "no action — auto resolution". Failure to act triggers the automatic resolution process described in §10.</p>
+
+      <p><strong>Edits and history:</strong> all edits are versioned and appended to \(hist_q\). Search indices and trust-scoring are recomputed against the latest version; historical versions remain accessible to authorized auditors.</p>
+
+      <p><strong>Deletion and supporter consent:</strong> if \(S_q\) is non-empty, any permanent deletion or content erasure requires unanimous consent from the set \(\{p_q\}\cup S_q\). Consent is recorded as signed transactions (cryptographic signatures or authenticated API calls) and stored in the audit log.</p>
+    </section>
+
+    <section id="bounties">
+      <h2>7. Additional bounties, split, and incentives</h2>
+
+      <p>Any account may add additional bounty \(b>0\) to an unresolved post \(q\). Each addition is recorded with contributor id, amount, and timestamp; the contributor becomes a stakeholder in the post's state.</p>
+
+      <p><strong>Poster share:</strong> the poster receives 10% of the sum of additional bounties \(B_{\mathrm{add}}=\sum b\). Formally, poster credit = \(0.10\cdot B_{\mathrm{add}}\). Implementation may credit immediately or reserve until resolution; the chosen operational policy must be documented and consistent.</p>
+
+      <p><strong>G trigger:</strong> if total bounty \(B_{\mathrm{total}} = B_0 + B_{\mathrm{add}} \ge (\pi/e)\cdot B_0\) (numerical factor ≈ 1.15572734979), the system flags the post for special continuation processing ("G" flow) as described in §11.</p>
+    </section>
+
+    <section id="trust">
+      <h2>8. Trust scoring — formal definition of \(T(a,q)\)</h2>
+
+      <p>Because author reputations are hidden, each answer \(a\) receives a machine-generated trust score \(T(a,q)\in[0,1]\) computed from an explicit feature vector \(\mathbf{s}_a\). The score is the calibrated probability estimate that the answer is relevant, internally consistent, and factually precise under the platform's definitions.</p>
+
+      <h3>Feature vector (examples)</h3>
+      <ul>
+        <li>\(<span class="math">s_1</span>\): source_quality — normalized measure of primary/peer-reviewed citations;</li>
+        <li>\(<span class="math">s_2</span>\): evidence_depth — structured stepwise reasoning length and explicitness;</li>
+        <li>\(<span class="math">s_3</span>\): reproducibility_score — fraction of runnable artifacts that execute and reproduce claimed outputs;</li>
+        <li>\(<span class="math">s_4</span>\): logical_coherence — LLM-based argumentation consistency score;</li>
+        <li>\(<span class="math">s_5</span>\): originality_penalty — plagiarism or duplication penalty;</li>
+        <li>\(<span class="math">s_6</span>\): modality_quality — alignment and clarity for audio/video transcripts;</li>
+        <li>\(<span class="math">s_7</span>\): external_fact_check — retrieval-augmented verification match ratio;</li>
+        <li>\(<span class="math">s_8</span>\): uncertainty_expression — presence of calibrated uncertainty language.</li>
+      </ul>
+
+      <h3>Model and calibration</h3>
+      <p>Compute raw score \(S_{\mathrm{raw}} = g(\mathbf{s}_a)\) where \(g\) is a deterministic scoring function (linear model or small neural network with fixed architecture). Calibrate \(S_{\mathrm{raw}}\) to a probability \(T\) using isotonic regression or Platt scaling trained on labeled examples to minimize Brier score. For transparency, the system must expose the top contributing features and their weights for each \(T\) value.</p>
+
+      <p><strong>Display rule:</strong> answers are presented sorted by \(T\) descending by default; the poster's decision UI must show the same ordering and the trust-score explanation for each answer.</p>
+    </section>
+
+    <section id="feed">
+      <h2>9. Feed ranking for potential answerers</h2>
+
+      <p>Feed ranking is lexicographic: primary key is relevance score \(\mathrm{Rel}(u,q)=\cos(E(u),E(q))\) where \(E(\cdot)\) are embeddings; secondary key is bounty \(B_q\) descending. Users may optionally declare expertise tags (not public) to seed \(E(u)\); the platform may also infer skill embeddings from opt-in profile data. The feed endpoint returns results sorted by (Rel desc, B desc).</p>
+    </section>
+
+    <section id="resolution">
+      <h2>10. Resolution flows, deadlines, and automatic distributions</h2>
+
+      <p><strong>Deadlines:</strong> default deadlines are configurable; recommended defaults: if \(c_q=\text{problem}\) then \(D=30\) days; if \(c_q=\text{academic}\) then \(D=60\) days. Deadlines reset on substantive poster edits or when the poster explicitly extends the deadline.</p>
+
+      <h3>Poster acceptance</h3>
+      <p>The poster may accept exactly one answer. On acceptance, the platform transfers escrow \(escrow(q)\) to the accepted answerer minus fee \(f\). The accepted answer receives a recorded acceptance timestamp and becomes the canonical resolution unless a debate later overturns it.</p>
+
+      <h3>Automatic resolution (poster non-action)</h3>
+      <p>If the poster does not act by the deadline, the platform executes the automatic distribution:</p>
+
+      <ol>
+        <li>Select top-\(<span class="math">k=3</span>\) answers by trust score \(T\). If fewer than \(k\) answers exist, use all available answers.</li>
+        <li>Let the selected answers have trust scores \(T_1,\dots,T_k\). Compute provisional payout for answer \(i\):</li>
+      </ol>
+
+      <div class="math-block">
+        \[ A_i = \left\lfloor \frac{T_i}{\sum_{j=1}^k T_j} \cdot B_{\mathrm{escrow}} \cdot (1-f) \right\rfloor. \]
+      </div>
+
+      <p>Rounding uses floor; any residual (escrow remainder after sum of \(A_i\)) is retained by the platform reserve by default unless an alternative residual policy is configured (e.g., distribute residual to highest-ranked answerer). The post is marked N# ("Not citable") when automatic distribution occurs without poster acceptance; N# posts are not eligible for citation (§12).</p>
+    </section>
+
+    <section id="debate">
+      <h2>11. Debate mechanism and J/G/H states (formal)</h2>
+
+      <p>The debate process is an explicit, time-bounded adjudication mechanism initiated by the poster or by stakeholder action. Participants are partitioned into two teams: Supporters (contributors to \(S_q\) or their delegates) and Answerers (authors of answers and their supporters). Each team submits claims, evidence, and rebuttals within the debate window (default 30 days). The platform computes deterministic claim extraction, overlap, and team composite scores to decide outcomes.</p>
+
+      <h3>Per-claim metric</h3>
+      <p>For any claim or answer compute a per-claim metric</p>
+
+      <div class="math-block">
+        \[ \mathcal{L} = \mathcal{Q}\cdot\alpha\cdot\mathcal{F}, \]
+      </div>
+
+      <p>where \(\mathcal{Q}\) is calibrated relevance probability, \(\alpha\) is calibrated internal-consistency probability, and \(\mathcal{F}\) is calibrated factual-precision probability as defined in the Appendix (integrated evaluation method). These components must be calibrated probabilities (see Appendix §Calibration).</p>
+
+      <h3>Team aggregation and uniqueness</h3>
+      <p>Aggregate per-claim metrics into a team-level weighted mean \(\bar{\mathcal{L}}_{\mathrm{team}}\) with weights proportional to evidence depth and citation counts. Compute claim-set overlap between teams: for Supporters claim set \(C_S\) and Answerers claim set \(C_A\), define overlap coefficient</p>
+
+      <div class="math-block">
+        \[ d = \frac{|C_A \cap C_S|}{|C_A \cup C_S|}, \qquad U = 1 - d. \]
+      </div>
+
+      <p>Team raw score is</p>
+
+      <div class="math-block">
+        \[ R_{\mathrm{team}} = \log(\bar{\mathcal{L}}_{\mathrm{team}} + \epsilon)\cdot U^\beta, \]
+      </div>
+
+      <p>with small \(\epsilon>0\) to avoid \(\log(0)\) and configurable exponent \(\beta\ge0\) to control uniqueness weighting. Normalize \(R_{\mathrm{team}}\) to a z-score using the historical distribution of \(R\) values:</p>
+
+      <div class="math-block">
+        \[ Z_{\mathrm{team}} = \frac{R_{\mathrm{team}} - \mu_R}{\sigma_R}, \]
+      </div>
+
+      <p>where \(\mu_R,\sigma_R\) are running mean and standard deviation computed from a rolling historical window (configurable; recommended 12 months of data or 10,000 debates, whichever is larger).</p>
+
+      <h3>Decision thresholds</h3>
+      <ul>
+        <li>If a team achieves \(Z_{\mathrm{team}} \ge \tau_J\) (recommended \(\tau_J=2.33\), corresponding to one-sided 1% tail under normality) then that team is awarded state <strong>J</strong> (Journal-level accepted). The winning answer(s) become citable and receive canonical identifiers.</li>
+        <li>If neither team reaches \(\tau_J\) but total bounty \(B_{\mathrm{total}} \ge (\pi/e)\cdot B_0\), the system triggers <strong>G</strong> processing: extend debate window by a configured extension (recommended 30 days) and optionally require additional evidence submission; supporters may be required to reconfirm stakes.</li>
+        <li>If neither condition holds by debate window close, the post is assigned <strong>H</strong> (no decisive acceptance) and then marked <strong>N#</strong> (Not citable); automatic distribution rules (§10) apply.</li>
+      </ul>
+
+      <p>All claim extraction, canonicalization, and overlap computations are deterministic functions of the submitted text and evidence; the same deterministic pipeline is applied to both teams to ensure fairness.</p>
+    </section>
+
+    <section id="papers">
+      <h2>12. Papers, citation, and reuse rules</h2>
+
+      <p>Only items with J status are permitted to be cited by future platform publications. J items receive a stable canonical identifier (CID), metadata fields (accepted_date, debate_id, Z_score, evidence summary), and are indexed in the platform citation index. N# items are explicitly excluded from citation and from being used as authoritative evidence in debates or papers.</p>
+    </section>
+
+    <section id="fraud">
+      <h2>13. Fraud and abuse defenses (strict)</h2>
+
+      <p>Signals used for detection: device fingerprinting, IP heuristics, behavioral embeddings, temporal posting patterns, and ledger flow graphs. Detection algorithms include graph analytics (k-core, Louvain community detection), LSH/MinHash duplicate detection on content embeddings, and temporal anomaly detectors for rapid fund movements.</p>
+
+      <p>Mitigations: withdrawal delays for new or high-risk accounts, tiered withdrawal limits, holds on suspicious funds, manual review for high-value transactions, and penalization of trust scores \(T\) when plagiarism or collusion is detected. All mitigation actions are logged in the immutable audit log.</p>
+    </section>
+
+    <section id="legal">
+      <h2>14. Legal and compliance constraints (high level)</h2>
+
+      <p>Implement KYC/AML for depositors and for accounts performing significant withdrawals. Payment operations must comply with applicable payment services and prepaid instrument regulations. Minors require special handling (§15). DMCA and other takedown flows must be supported. High-risk advice categories (medical, legal, financial) must include explicit disclaimers and may be excluded from automatic acceptance or J-status without human review.</p>
+    </section>
+
+    <section id="minors">
+      <h2>15. Minors and payout design</h2>
+
+      <p>Design patterns to allow minors to obtain value while limiting legal risk:</p>
+      <ol>
+        <li>Spend-first partner redemption: immediate conversion of iVucx to curated vendor credits (books, courses, hardware vouchers) without fiat transfer.</li>
+        <li>Gift-card / prepaid channel: small monthly cap (configurable; recommended default equivalent to 100 USD) for voucher conversion without KYC; larger conversions require custodial partner or KYC.</li>
+        <li>Custodial trustee flow: route larger sums to licensed custodial partners with guardian controls.</li>
+        <li>Grant/scholarship routing: sponsors pay institutions or scholarship accounts rather than direct minor payouts.</li>
+        <li>Tiered KYC and holds: minors may withdraw subject to stricter checks and longer hold periods.</li>
+      </ol>
+
+      <p>All reward language in TOS must use non-contractual terms ("reward", "prize", "grant") and avoid wage-like commitments.</p>
+    </section>
+
+    <section id="data-model">
+      <h2>16. Data model (core tables)</h2>
+
+      <p>Core conceptual tables (Postgres-style names): <code>users</code>, <code>posts</code>, <code>answers</code>, <code>papers</code>, <code>debates</code>, <code>claims</code>, <code>supports</code>, <code>ivucx_ledger</code>, <code>escrow</code>, <code>trust_features</code>, <code>audit_log</code>, <code>citation_index</code>. Each table includes immutable primary keys, created/updated timestamps, and cryptographic integrity checks (hashes) for critical records.</p>
+    </section>
+
+    <section id="api">
+      <h2>17. API surface (selected endpoints)</h2>
+
+      <pre>
+POST /v1/posts
+POST /v1/posts/{id}/support
+POST /v1/posts/{id}/answers
+GET  /v1/feed?user={}&limit={}
+GET  /v1/posts/{id}/answers?sort=trust
+POST /v1/posts/{id}/start_debate
+POST /v1/debates/{id}/claims
+GET  /v1/debates/{id}/score
+POST /v1/posts/{id}/approve
+GET  /v1/trust/{answer_id}
+POST /v1/ivucx/deposit
+POST /v1/ivucx/withdraw
+      </pre>
+
+      <p>Authentication: JWT over TLS. All financial endpoints produce immutable ledger entries. Endpoints must validate inputs, enforce rate limits, and produce deterministic outputs for identical inputs.</p>
+    </section>
+
+    <section id="ui">
+      <h2>18. UI rules and UX cues</h2>
+
+      <ul>
+        <li>Always display trust score \(T\) and a concise explanation of top contributing features for each answer.</li>
+        <li>Clearly indicate per-post anonymity (e.g., "This post was submitted anonymously; identity is not shown").</li>
+        <li>Conspicuously mark J and N# states and explain citation consequences.</li>
+        <li>When a debate is active, show Z scores, remaining time, and major contributing evidence items.</li>
+        <li>Remind posters every 60 days to take action on open posts.</li>
+      </ul>
+    </section>
+
+    <section id="kpis">
+      <h2>19. KPIs and evaluation</h2>
+
+      <p>Quality KPIs: Precision@1 (human adjudicated), Brier score for trust-score calibration, calibration curves, ECE.</p>
+      <p>Engagement KPIs: time_to_first_answer, acceptance rate, average answers per post.</p>
+      <p>Economy KPIs: average bounty, iVucx velocity, Gini coefficient of iVucx distribution.</p>
+      <p>Safety KPIs: fraud_flag_rate, dispute resolution time, percent of J outcomes vs H/N#.</p>
+    </section>
+
+    <section id="mvp">
+      <h2>20. Implementation priorities (MVP)</h2>
+
+      <ol>
+        <li>Immutable double-entry ledger and escrow subsystem with audit logs.</li>
+        <li>Anonymous post UI with per-post display IDs and media storage.</li>
+        <li>Basic iVucx deposit (adult) and withdrawal hooks with KYC placeholders.</li>
+        <li>Answer submission pipeline and trust-score prototype (feature extractor + linear model + calibration).</li>
+        <li>Automatic distribution logic for deadlines and rounding policy.</li>
+        <li>Debate scaffolding (start, submit claims, compute overlap) and J/N#/H tagging.</li>
+        <li>Basic fraud detection (rate limits, device/IP heuristics, duplicate detection).</li>
+      </ol>
+    </section>
+
+    <section id="risks">
+      <h2>21. Risks and mitigations</h2>
+
+      <p>Major risks: regulatory (payments, minors), sybil/collusion, misinformation, economic exploitation. Mitigations: legal counsel, tiered KYC, custodial partners, graph analytics, human review for high-risk categories, reserve and anti-abuse sinks, and fee policy.</p>
+    </section>
+
+    <section id="summary">
+      <h2>22. Final conceptual summary</h2>
+
+      <p>Express-Path is a content-centric knowledge market and multimodal publication system that enforces per-post anonymity, algorithmic trust scoring, configurable economic incentives (iVucx), supporter stakes, and a formal debate-to-citation pipeline (J/G/H/N#). The platform requires robust ledger integrity, deterministic adjudication pipelines, fraud detection, and legal compliance mechanisms to operate safely and predictably.</p>
+    </section>
+
+    <section id="appendix">
+      <h2>Appendix: Formal evaluation method (integrated from attached assessment)</h2>
+
+      <p class="muted">The following appendix reproduces and completes the formal evaluation method for computing answer credibility \(\mathcal{L}\) and rebuttal credibility \(\mathcal{E}\). All definitions are explicit and calibrated probabilities are required.</p>
+
+      <h3>1. Probabilistic definitions and notation</h3>
+
+      <p>Given question \(Q\), candidate answer \(A\), and candidate rebuttal \(E\), define binary events:</p>
+      <ul>
+        <li>\(R_A\): answer \(A\) is relevant to \(Q\).</li>
+        <li>\(C_A\): reasoning in \(A\) is internally consistent.</li>
+        <li>\(F_A\): \(A\) is factually precise / sufficiently specified.</li>
+        <li>\(R_E, C_E, F_E\): analogous events for rebuttal \(E\) with respect to \(A\).</li>
+        <li>\(\zeta\): event that \(E\) successfully refutes at least one key claim of \(A\).</li>
+      </ul>
+
+      <h3>2. Component posterior probabilities (calibrated)</h3>
+
+      <div class="math-block">
+        \[
+        \begin{aligned}
+        \mathcal{Q}_A &:= P(R_A=1\mid A,Q),\quad
+        \alpha_A := P(C_A=1\mid A,Q),\quad
+        \mathcal{F}_A := P(F_A=1\mid A,Q),\\[6pt]
+        \mathcal{Q}_E &:= P(R_E=1\mid E,A),\quad
+        \alpha_E := P(C_E=1\mid E,A),\quad
+        \mathcal{F}_E := P(F_E=1\mid E,A),\quad
+        \zeta := P(\text{``}E\text{ refutes }A\text{''}\mid E,A).
+        \end{aligned}
+        \]
+      </div>
+
+      <p>Each of the above must be a calibrated probability: for all instances where the system outputs \(p\) for a component, the empirical frequency of the event should be approximately \(p\).</p>
+
+      <h3>3. Ideal chain-rule target</h3>
+
+      <p>The ideal target for answer credibility is the joint posterior</p>
+
+      <div class="math-block">
+        \[ P(R_A \land C_A \land F_A \mid A,Q). \]
+      </div>
+
+      <p>By the chain rule, this equals</p>
+
+      <div class="math-block">
+        \[ P(R_A\mid A,Q)\cdot P(C_A\mid A,Q,R_A)\cdot P(F_A\mid A,Q,R_A,C_A). \]
+      </div>
+
+      <p>If conditional estimators are available, use them. Otherwise the practical approximation uses calibrated marginals as below.</p>
+
+      <h3>4. Practical scoring formulas (approximate)</h3>
+
+      <div class="math-block">
+        \[
+        \boxed{\displaystyle \mathcal{L} \;=\; \mathcal{Q}_A \cdot \alpha_A \cdot \mathcal{F}_A}
+        \qquad\text{and}\qquad
+        \boxed{\displaystyle \mathcal{E} \;=\; \mathcal{Q}_E \cdot \alpha_E \cdot \mathcal{F}_E \cdot \zeta.}
+        \]
+      </div>
+
+      <p>These are exact if the components are the chain-rule conditional factors; otherwise they are calibrated-product approximations and must be validated against human judgments.</p>
+
+      <h3>5. Algorithmic pipeline (deterministic specification)</h3>
+
+      <ol>
+        <li><strong>Claim extraction:</strong> deterministically extract atomic claims \(S_A=\{s_{A,i}\}\) and \(S_E=\{s_{E,j}\}\) using a fixed prompt and canonicalization rules (tokenization, normalization, canonical variable naming). The extraction function must be deterministic given the same input and prompt.</li>
+
+        <li><strong>Raw scoring:</strong> compute raw real-valued scores \(z\) for each component using the pre-trained model as a deterministic scorer:
+          <ul>
+            <li>\(z_{\mathcal{Q}_A} = \mathrm{raw\_relevance}(Q,A)\)</li>
+            <li>\(z_{\alpha_A} = \mathrm{raw\_consistency}(A)\)</li>
+            <li>\(z_{\mathcal{F}_A} = \mathrm{raw\_factuality}(A)\) (retrieval-augmented when available)</li>
+            <li>Analogous \(z\) values for \(E\).</li>
+            <li>For refutation, compute per-claim contradiction scores \(z^{\mathrm{ref}}_i = \mathrm{raw\_contradiction}(E,s_{A,i})\) and aggregate (e.g., \(\max_i z^{\mathrm{ref}}_i\) or weighted average).</li>
+          </ul>
+        </li>
+
+        <li><strong>Calibration:</strong> learn monotone transforms \(T\) (Platt or isotonic) mapping raw scores \(z\) to probabilities \(p=T(z)\) using held-out labeled datasets. Apply transforms to obtain \(\mathcal{Q}_A,\alpha_A,\mathcal{F}_A,\dots,\zeta\).</li>
+
+        <li><strong>Optional conditional estimation:</strong> if feasible, estimate conditional probabilities directly (e.g., \(P(C_A\mid A,Q,R_A)\)) by including estimated relevance as an input feature to the consistency head.</li>
+
+        <li><strong>Aggregation:</strong> for multi-claim answers, compute per-claim \(\mathcal{F}_{A,i}\) and aggregate according to the chosen semantics (conjunctive or disjunctive) with explicit correlation adjustments when available.</li>
+
+        <li><strong>Explanation trace:</strong> produce a deterministic explanation: which claims reduced \(\mathcal{F}\), which pairwise contradictions contributed to \(\alpha\), and which retrieval snippets supported factuality judgments.</li>
+      </ol>
+
+      <h3>6. Aggregation semantics for multiple claims</h3>
+
+      <p>Two canonical semantics:</p>
+      <ul>
+        <li><strong>Conjunctive precision</strong> (all claims must be precise):
+          \[
+          \mathcal{L}_{\mathrm{conj}} = \mathcal{Q}_A\cdot\alpha_A\cdot\prod_i \mathcal{F}_{A,i}.
+          \]
+        </li>
+        <li><strong>Disjunctive success</strong> (at least one claim suffices): under independence,
+          \[
+          P(\text{at least one precise}) \approx 1 - \prod_i (1 - p_i),
+          \]
+          where \(p_i\) are per-claim joint probabilities; adjust for pairwise correlations when available.
+        </li>
+      </ul>
+
+      <h3>7. Calibration, training data, and evaluation metrics</h3>
+
+      <p>Training datasets must include human-labeled examples for relevance, internal consistency, factual precision, and refutation. Use Platt scaling or isotonic regression for calibration. Evaluate with Brier score, ECE, ROC AUC, PR AUC, and log-loss. Perform adversarial testing and domain stratification to detect overconfidence.</p>
+
+      <h3>8. Limitations and safeguards</h3>
+
+      <ul>
+        <li>Calibrated marginals do not guarantee correct joint probabilities; prefer chain-rule conditional estimation when possible.</li>
+        <li>Guard against gaming by maintaining human audits and adversarial examples in training and evaluation sets.</li>
+        <li>Factuality (\(\mathcal{F}\)) requires retrieval-augmented verification; language-model-only judgments are insufficient for high-stakes claims.</li>
+        <li>Always provide explanation traces with scores for human interpretability and appeal.</li>
+      </ul>
+
+      <p class="muted">End of appendix.</p>
+    </section>
+
+    <footer>
+      <p class="muted">If you require a machine-readable OpenAPI v3 specification, Postgres DDL for the core tables, or deterministic pseudocode (Python-style) that implements the trust-scoring and debate overlap algorithms exactly as specified above, I will produce one of those artifacts next. Contact for delivery or questions: <strong>pdx.error@gmail.com</strong>.</p>
+    </footer>
+  </main>
+</body>
+</html>
